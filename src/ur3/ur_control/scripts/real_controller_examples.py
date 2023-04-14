@@ -30,6 +30,7 @@ import argparse
 import rospy
 import timeit
 import numpy as np
+import tf
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=np.inf)
 
@@ -69,13 +70,26 @@ def move_endeffector(wait=True):
     # add translation/rotation to current position
     # cpose = transformations.pose_euler_to_quaternion(cpose, deltax, ee_rotation=True)
     # execute desired new pose
-    cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
-    # Translation: [0.310, -0.265, 0.326]
-    # Rotation: in Quaternion [0.549, 0.483, 0.501, 0.463]
-    # print("final")
-    # print(cpose)
-    # may fail if IK solution is not found
-    arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+    listener = tf.TransformListener()
+
+    rate = rospy.Rate(10.0)
+
+    while not rospy.is_shutdown():
+        try:
+            (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
+            cpose = [trans[0], trans[1], trans[2], 0.51339687, -0.50204173, 0.49461101, -0.48963016]
+            print("no error")
+            arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            print("error aqui")
+            continue
+        rate.sleep()
+
+    # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
+    # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
+    print("se va a mover a ")
+    print(cpose)
+    # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
 
 
 def move_gripper():

@@ -77,7 +77,7 @@ def move_endeffector(wait=True):
     while not rospy.is_shutdown():
         try:
             (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
-            cpose = [trans[0], trans[1], trans[2], 0.51339687, -0.50204173, 0.49461101, -0.48963016]
+            cpose = [trans[0], trans[1], trans[2], -0.45880805, 0.53243781, -0.49661238, 0.5092949]
             print("no error")
             arm.set_target_pose(pose=cpose, wait=True, t=1.0)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
@@ -90,6 +90,7 @@ def move_endeffector(wait=True):
     print("se va a mover a ")
     print(cpose)
     # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+    # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
 
 
 def move_gripper():

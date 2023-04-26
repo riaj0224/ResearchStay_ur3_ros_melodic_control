@@ -30,4 +30,6 @@
      safety_limits="$(arg safety_limits)"
      safety_pos_margin="$(arg safety_pos_margin)"
      safety_k_position="$(arg safety_k_position)"/>
+
+      <xacro:include filename="$(find ur_description)/urdf/camera.xacro" />
 </robot>

@@ -44,7 +44,7 @@ np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=np.inf)
 
 
-def move_joints(wait=True):
+def move_joints(wait=False):
     # desired joint configuration 'q'
     # q = [0, 0, 0, 0, 0, 0]
     # q = [3.2317, -1.979, 1.3969, -0.4844, -0.1151, -1.7565]
@@ -71,8 +71,9 @@ def follow_trajectory():
         [2.4463, -1.9799, -1.7954, 0.5502, 2.2378, 3.1960],
         [2.5501, -2.0719, -1.6474, 0.5000, 2.1344, 3.2062],
     ]
+
     for t in traj:
-        arm.set_joint_positions(position=t, wait=True, t=1.0)
+        arm.set_joint_positions(position=t, wait=False, t=1.0)
 
 
 def move_endeffector(wait=True):

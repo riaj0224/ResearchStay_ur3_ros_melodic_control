@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*- 
+
 
 # The MIT License (MIT)
 #
@@ -33,6 +35,83 @@ import numpy as np
 import tf
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=np.inf)
+from ur_msgs.srv import *
+
+
+class DigitalOutputManager:
+    def __init__(self, initial_states):
+        self.pin_states = initial_states     #0,1,0: enable, direccion, steps
+        self.pins = [0, 1, 2]                                                   
+        self.toggle_count = 0 
+
+        for i in range(2):
+            rospy.wait_for_service('/ur_hardware_interface/set_io')                                        
+        try:
+            set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
+            resp = set_io(fun=1, pin=i, state=self.pin_states[i])
+            # return resp.success                                                
+        except rospy.ServiceException as e: 
+            print("primero")                                    
+            print("Service call failed: %s" % e)      
+
+        # self.timer = rospy.Timer(rospy.Duration(1), self.timer_callback) 
+
+        rospy.wait_for_service('/ur_hardware_interface/set_io')                                        
+        try:
+            set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
+            for i in range(66):
+                resp = set_io(fun=1, pin=2, state=self.pin_states[2])
+                rospy.sleep(0.001)
+                if self.pin_states[2] == 1.0:
+                    self.pin_states[2] = 0.0
+                elif self.pin_states[2] == 0.0:
+                    self.pin_states[2] = 1.0 
+                print("i:")
+                print(str(i))
+                print("state:")
+                print(self.pin_states[2])
+            # return resp.success                                                
+        except rospy.ServiceException as e: 
+            print("primero")                                    
+            print("Service call failed: %s" % e)      
+
+
+    def toggle_digital_output(self):
+
+        if self.pin_states[2] == 1.0:
+            self.pin_states[2] = 0.0
+        elif self.pin_states[2] == 0.0:
+            self.pin_states[2] = 1.0    
+
+        # rospy.wait_for_service('/ur_hardware_interface/set_io')                                        
+        try:
+            set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
+            resp = set_io(fun=1, pin=2, state=self.pin_states[2])
+            # return resp.success                                                
+        except rospy.ServiceException as e:  
+            print("segundo") 
+            print(str(self.toggle_count))                                    
+            print("Service call failed: %s" % e)
+
+    def timer_callback(self, event):
+        print(str(self.toggle_count))                                    
+
+        if self.toggle_count >= 33:                                             # Rotate x degrees: degrees x 0.5555555
+            self.timer.shutdown()
+            return
+
+        # Cambia el estado de los pines
+        # self.toggle_digital_output(self.pins[2])                                # Which pin to toggle
+        self.toggle_digital_output()  
+
+        # Incrementa la cuenta de cambios de estado
+        self.toggle_count += 1                                                  # Counter
+
+    def restart_toggling(self):
+        # Reinicia el contador de cambios de estado y el Timer
+        self.toggle_count = 0                                                   # Restart process
+        self.initial_states[1] = not self.initial_states[1]                     # Change direction of the gripper
+        self.timer = rospy.Timer(rospy.Duration(0.001), self.timer_callback)    # Excecute toggle function
 
 
 def move_joints(wait=True):
@@ -63,35 +142,46 @@ def follow_trajectory():
 
 
 def move_endeffector(wait=True):
-    # get current position of the end effector
-    cpose = arm.end_effector()
-    # define the desired translation/rotation
-    # deltax = np.array([0., 0., 0.04, 0., 0., 0.])
-    # add translation/rotation to current position
-    # cpose = transformations.pose_euler_to_quaternion(cpose, deltax, ee_rotation=True)
-    # execute desired new pose
-    listener = tf.TransformListener()
+    # # get current position of the end effector
+    # cpose = arm.end_effector()
+    # # define the desired translation/rotation
+    # # deltax = np.array([0., 0., 0.04, 0., 0., 0.])
+    # # add translation/rotation to current position
+    # # cpose = transformations.pose_euler_to_quaternion(cpose, deltax, ee_rotation=True)
+    # # execute desired new pose
+    # listener = tf.TransformListener()
 
-    rate = rospy.Rate(10.0)
+    # rate = rospy.Rate(10.0)
 
-    while not rospy.is_shutdown():
-        try:
-            (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
-            cpose = [trans[0], trans[1], trans[2], -0.45880805, 0.53243781, -0.49661238, 0.5092949]
-            print("no error")
-            arm.set_target_pose(pose=cpose, wait=True, t=1.0)
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            print("error aqui")
-            continue
-        rate.sleep()
+    # while not rospy.is_shutdown():
+    #     try:
+    #         # change to /wrist_3_link /aruco_marker_frame
+    #         (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
+    #         # if pose is between a certain range -0.45880805, 0.53243781, -0.49661238, 0.5092949
+    #         #  0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622
+    #         cpose = [trans[0]-0.25, trans[1]+0.082, trans[2], 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
+    #         print("no error, se va a mover")
+    #         arm.set_target_pose(pose=cpose, wait=False, t=1.0)
+    #         print(cpose)
+    #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+    #         print("error aqui")
+    #         continue
+    #     rate.sleep()
 
-    # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
-    # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
-    print("se va a mover a ")
-    print(cpose)
-    # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
-    # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
-
+    # # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
+    # # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
+    # print("se va a mover a ")
+    # print(cpose)
+    # # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+    # # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
+    # rospy.wait_for_service('/ur_hardware_interface/set_io')  
+    # try:                                     
+    #     set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)
+    #     resp = set_io(fun=1, pin=16, state=1)
+    #     return resp.success
+    # except rospy.ServiceException as e:                                     
+    #     print("Service call failed: %s" % e)
+    digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0]) 
 
 def move_gripper():
     # very different than simulation

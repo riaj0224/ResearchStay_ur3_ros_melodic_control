@@ -1,4 +1,4 @@
 <launch>
-  <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" args="-d $(find ur_robot_driver)/resources/example_rviz_config.rviz"/>
+  <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" args="-d /home/susyreyesm/ros/ur3c_ws/src/configs/newconfig.rviz"/>
   <!-- <node pkg="tf" type="static_transform_publisher" name="ee_ini" args="-0.271 0.264 0.329 0.483 -0.549 -0.463 0.501 base wrist_3_link_ini" /> -->
 </launch>

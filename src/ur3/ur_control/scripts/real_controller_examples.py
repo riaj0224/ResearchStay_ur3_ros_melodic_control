@@ -36,6 +36,7 @@ import tf
 np.set_printoptions(suppress=True)
 np.set_printoptions(linewidth=np.inf)
 from ur_msgs.srv import *
+import sys
 
 
 class DigitalOutputManager:
@@ -49,7 +50,7 @@ class DigitalOutputManager:
         try:
             set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
             resp = set_io(fun=1, pin=i, state=self.pin_states[i])
-            # return resp.success                                                
+            # print(resp.success)                                                
         except rospy.ServiceException as e: 
             print("primero")                                    
             print("Service call failed: %s" % e)      
@@ -59,20 +60,22 @@ class DigitalOutputManager:
         rospy.wait_for_service('/ur_hardware_interface/set_io')                                        
         try:
             set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
-            for i in range(66):
-                resp = set_io(fun=1, pin=2, state=self.pin_states[2])
-                rospy.sleep(0.001)
-                if self.pin_states[2] == 1.0:
-                    self.pin_states[2] = 0.0
-                elif self.pin_states[2] == 0.0:
-                    self.pin_states[2] = 1.0 
-                print("i:")
-                print(str(i))
-                print("state:")
-                print(self.pin_states[2])
-            # return resp.success                                                
+            if (self.toggle_count == 0):
+                for i in range(900):
+                    resp = set_io(fun=1, pin=2, state=self.pin_states[2])
+                    rospy.sleep(0.0008)
+                    if self.pin_states[2] == 1.0:
+                        self.pin_states[2] = 0.0
+                    elif self.pin_states[2] == 0.0:
+                        self.pin_states[2] = 1.0 
+                    # print("i:")
+                    # print(str(i))
+                    # print("state:")
+                    # print(self.pin_states[2])
+                # return resp.success   
+                self.toggle_count=1                                             
         except rospy.ServiceException as e: 
-            print("primero")                                    
+            # print("primero")                                    
             print("Service call failed: %s" % e)      
 
 
@@ -154,34 +157,50 @@ def move_endeffector(wait=True):
     # rate = rospy.Rate(10.0)
 
     # while not rospy.is_shutdown():
+    #     # for i in range(10):
     #     try:
     #         # change to /wrist_3_link /aruco_marker_frame
     #         (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
     #         # if pose is between a certain range -0.45880805, 0.53243781, -0.49661238, 0.5092949
     #         #  0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622
-    #         cpose = [trans[0]-0.25, trans[1]+0.082, trans[2], 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
-    #         print("no error, se va a mover")
-    #         arm.set_target_pose(pose=cpose, wait=False, t=1.0)
-    #         print(cpose)
+    #         cpose = [trans[0]-0.1, trans[1]+0.09, trans[2]-0.01, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
+    #         print("SÍ va a mover")
+    #         arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+    #         print("terminó de moverse")
+    #         rospy.sleep(5.0)
+    #         # (trans_eeTar,rot_eeTar) = listener.lookupTransform('/wrist_3_link', '/aruco_marker_frame', rospy.Time(0))
+    #         print("ABRIENDO gripper")
+    #         #rospy.loginfo("Distance is = {0:f}".format(np.linalg.norm(trans_eeTar)))
+    #         #if np.linalg.norm(trans_eeTar) <= 13.0:
+    #         # if trans_eeTar[2] <= 0.14:
+    #         digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
+    #         print("TERMINÓ de mover gripper")
+    #         rospy.sleep(5.0)
     #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-    #         print("error aqui")
+    #         print("NO se va a mover. NO encontró tf")
     #         continue
     #     rate.sleep()
 
     # # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
     # # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
-    # print("se va a mover a ")
-    # print(cpose)
     # # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
     # # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
-    # rospy.wait_for_service('/ur_hardware_interface/set_io')  
-    # try:                                     
-    #     set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)
-    #     resp = set_io(fun=1, pin=16, state=1)
-    #     return resp.success
-    # except rospy.ServiceException as e:                                     
-    #     print("Service call failed: %s" % e)
-    digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0]) 
+    # # rospy.wait_for_service('/ur_hardware_interface/set_io')  
+    # # try:                                     
+    # #     set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)
+    # #     resp = set_io(fun=1, pin=16, state=1)
+    # #     return resp.success
+    # # except rospy.ServiceException as e:                                     
+    # #     print("Service call failed: %s" % e)
+
+
+
+
+
+    ## PRUEBAS GRIPPER
+    print("ABRIENDO gripper")
+    digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
+    print("TERMINÓ de mover gripper")
 
 def move_gripper():
     # very different than simulation

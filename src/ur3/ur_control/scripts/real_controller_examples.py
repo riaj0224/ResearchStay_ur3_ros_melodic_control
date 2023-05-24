@@ -1,31 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 
-
-# The MIT License (MIT)
-#
-# Copyright (c) 2018-2021 Cristian Beltran
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-# Author: Cristian Beltran
-
 from ur_control import transformations
 from ur_control.arm import Arm
 import argparse
@@ -44,6 +19,7 @@ class DigitalOutputManager:
         self.pin_states = initial_states     #0,1,0: enable, direccion, steps
         self.pins = [0, 1, 2]                                                   
         self.toggle_count = 0 
+        self.rate = rospy.Rate(5000)
 
         for i in range(2):
             rospy.wait_for_service('/ur_hardware_interface/set_io')                                        
@@ -61,9 +37,10 @@ class DigitalOutputManager:
         try:
             set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)                        
             if (self.toggle_count == 0):
-                for i in range(900):
+                for i in range(800):
                     resp = set_io(fun=1, pin=2, state=self.pin_states[2])
-                    rospy.sleep(0.0008)
+                    # rospy.sleep(0.0005)
+                    self.rate.sleep()
                     if self.pin_states[2] == 1.0:
                         self.pin_states[2] = 0.0
                     elif self.pin_states[2] == 0.0:
@@ -118,14 +95,11 @@ class DigitalOutputManager:
 
 
 def move_joints(wait=True):
-    # desired joint configuration 'q'
-    q = [0.0, -1.570796368, 0.0, -1.570796368,  0.0,  0.0]
-
-    # go to desired joint configuration
-    # in t time (seconds)
-    # wait is for waiting to finish the motion before executing
-    # anything else or ignore and continue with whatever is next
+    q = [-0.0916, -1.971, 2.187, -3.358, -1.626, 0.176]
     arm.set_joint_positions(position=q, wait=wait, t=0.5)
+    print("MOVIENDO gripper")
+    digital_output_manager = DigitalOutputManager([0.0, 0.0, 0.0])       
+    print("TERMINÓ de mover gripper")
 
 
 def follow_trajectory():
@@ -145,62 +119,52 @@ def follow_trajectory():
 
 
 def move_endeffector(wait=True):
-    # # get current position of the end effector
-    # cpose = arm.end_effector()
-    # # define the desired translation/rotation
-    # # deltax = np.array([0., 0., 0.04, 0., 0., 0.])
-    # # add translation/rotation to current position
-    # # cpose = transformations.pose_euler_to_quaternion(cpose, deltax, ee_rotation=True)
-    # # execute desired new pose
-    # listener = tf.TransformListener()
+    cpose = arm.end_effector()
+    listener = tf.TransformListener()
 
-    # rate = rospy.Rate(10.0)
+    rate = rospy.Rate(10.0)
+    # print("starting position")
+    # print(arm.end_effector())
 
-    # while not rospy.is_shutdown():
-    #     # for i in range(10):
-    #     try:
-    #         # change to /wrist_3_link /aruco_marker_frame
-    #         (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
-    #         # if pose is between a certain range -0.45880805, 0.53243781, -0.49661238, 0.5092949
-    #         #  0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622
-    #         cpose = [trans[0]-0.1, trans[1]+0.09, trans[2]-0.01, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
-    #         print("SÍ va a mover")
-    #         arm.set_target_pose(pose=cpose, wait=True, t=1.0)
-    #         print("terminó de moverse")
-    #         rospy.sleep(5.0)
-    #         # (trans_eeTar,rot_eeTar) = listener.lookupTransform('/wrist_3_link', '/aruco_marker_frame', rospy.Time(0))
-    #         print("ABRIENDO gripper")
-    #         #rospy.loginfo("Distance is = {0:f}".format(np.linalg.norm(trans_eeTar)))
-    #         #if np.linalg.norm(trans_eeTar) <= 13.0:
-    #         # if trans_eeTar[2] <= 0.14:
-    #         digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
-    #         print("TERMINÓ de mover gripper")
-    #         rospy.sleep(5.0)
-    #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-    #         print("NO se va a mover. NO encontró tf")
-    #         continue
-    #     rate.sleep()
+    while not rospy.is_shutdown():
+        # for i in range(10):
+        try:
+            # change to /wrist_3_link /aruco_marker_frame
+            (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
+            # cpose = [trans[0]-0.1, trans[1]+0.09, trans[2]-0.01, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
+            cpose = [trans[0]-0.1-0.025-0.05-0.02, trans[1]+0.09+0.010, trans[2]+0.065, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
 
-    # # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
-    # # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
-    # # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
-    # # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
-    # # rospy.wait_for_service('/ur_hardware_interface/set_io')  
-    # # try:                                     
-    # #     set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)
-    # #     resp = set_io(fun=1, pin=16, state=1)
-    # #     return resp.success
-    # # except rospy.ServiceException as e:                                     
-    # #     print("Service call failed: %s" % e)
+            print("SÍ va a mover")
+            arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+            print("terminó de moverse")
+            rospy.sleep(5.0)
+            print("MOVIENDO gripper")
+            digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
+            print("TERMINÓ de mover gripper")
+            rospy.sleep(5.0)
+            print("TERMINÓ timer")
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            print("NO se va a mover. NO encontró tf")
+            continue
+        rate.sleep()
+
+    # cpose_rot = 0.51339687 -0.50204173  0.49461101 -0.48963016
+    # cpose = [0.31039883, -0.26478611, 0.32612011, 0.54907157, 0.48249772, 0.50090525, 0.4634763]
+    # arm.set_target_pose(pose=cpose, wait=True, t=1.0)
+    # 0.38132267  0.33066657  0.18569623 -0.45880805  0.53243781 -0.49661238  0.5092949
+    # rospy.wait_for_service('/ur_hardware_interface/set_io')  
+    # try:                                     
+    #     set_io = rospy.ServiceProxy('/ur_hardware_interface/set_io', SetIO)
+    #     resp = set_io(fun=1, pin=16, state=1)
+    #     return resp.success
+    # except rospy.ServiceException as e:                                     
+    #     print("Service call failed: %s" % e)
 
 
-
-
-
-    ## PRUEBAS GRIPPER
-    print("ABRIENDO gripper")
-    digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
-    print("TERMINÓ de mover gripper")
+    # ## PRUEBAS GRIPPER
+    # print("ABRIENDO gripper")
+    # digital_output_manager = DigitalOutputManager([0.0, 0.0, 0.0])       
+    # print("TERMINÓ de mover gripper")
 
 def move_gripper():
     # very different than simulation

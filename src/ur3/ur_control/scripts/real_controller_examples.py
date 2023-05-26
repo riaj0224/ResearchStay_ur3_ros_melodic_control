@@ -97,6 +97,7 @@ class DigitalOutputManager:
 def move_joints(wait=True):
     q = [-0.0916, -1.971, 2.187, -3.358, -1.626, 0.176]
     arm.set_joint_positions(position=q, wait=wait, t=0.5)
+    rospy.sleep(2.0)
     print("MOVIENDO gripper")
     digital_output_manager = DigitalOutputManager([0.0, 0.0, 0.0])       
     print("TERMINÓ de mover gripper")
@@ -123,26 +124,50 @@ def move_endeffector(wait=True):
     listener = tf.TransformListener()
 
     rate = rospy.Rate(10.0)
-    # print("starting position")
-    # print(arm.end_effector())
+    d_cam_corr_x = -0.0678
+    d_cam_corr_y = -0.0254
+    corr_gripper_y = 0.145
+    corr_gripper_x = -0.09
+    corr_gripper_z = 0.07
+
 
     while not rospy.is_shutdown():
         # for i in range(10):
         try:
-            # change to /wrist_3_link /aruco_marker_frame
-            (trans,rot) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
-            # cpose = [trans[0]-0.1, trans[1]+0.09, trans[2]-0.01, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
-            cpose = [trans[0]-0.1-0.025-0.05-0.02, trans[1]+0.09+0.010, trans[2]+0.065, 0.4378778241563764, -0.5485216921328319, 0.4716653894824599, -0.5337777859148622]
+            # cpose = [transAruco[0]+d_cam_corr_x+corr_gripper_x, transAruco[1]+d_cam_corr_y+corr_gripper_y, transAruco[2]+corr_gripper_z, rotEE[0], rotEE[1], rotEE[2], rotEE[3]]
+            (transAruco,rotAruco) = listener.lookupTransform('/base_link', '/aruco_marker_frame', rospy.Time(0))
+            (transEE,rotEE) = listener.lookupTransform('/base_link', '/wrist_3_link', rospy.Time(0))
+            
+            Zpose = arm.end_effector()
+            # print("current pose")
+            # print(Zpose)
+            # print("transEE")
+            # print(transEE)
+            # print("rotEE")
+            # print(rotEE)
 
-            print("SÍ va a mover")
-            arm.set_target_pose(pose=cpose, wait=True, t=1.0)
-            print("terminó de moverse")
-            rospy.sleep(5.0)
+            # Zpose = [Zpose[0], Zpose[1], transAruco[2]+corr_gripper_z, Zpose[3], Zpose[4], Zpose[5], Zpose[6]]
+            # print("Va a moverse en Z")
+            # arm.set_target_pose(pose=Zpose, wait=True, t=1.0)
+            # Ypose = arm.end_effector()
+            # Ypose = [Ypose[0], transAruco[1]+d_cam_corr_y+corr_gripper_y, Ypose[2],  Ypose[3], Ypose[4], Ypose[5], Ypose[6]]
+            # print("Va a moverse en Y")
+            # arm.set_target_pose(pose=Ypose, wait=True, t=1.0)
+            # Xpose = arm.end_effector()
+            # Xpose = [transAruco[0]+d_cam_corr_x+corr_gripper_x, Xpose[1], Xpose[2],  Xpose[3], Xpose[4], Xpose[5], Xpose[6]]
+            # print("Va a moverse en X")
+            # arm.set_target_pose(pose=Xpose, wait=True, t=1.0)
+
+            Zpose = [transAruco[0]+d_cam_corr_x+corr_gripper_x, transAruco[1]+d_cam_corr_y+corr_gripper_y, transAruco[2]+corr_gripper_z, Zpose[3], Zpose[4], Zpose[5], Zpose[6]]
+            print("Va a moverse")
+            arm.set_target_pose(pose=Zpose, wait=True, t=1.0)
+
+            print("Terminó de moverse")
             print("MOVIENDO gripper")
+            rospy.sleep(2.0)
             digital_output_manager = DigitalOutputManager([0.0, 1.0, 0.0])       
             print("TERMINÓ de mover gripper")
-            rospy.sleep(5.0)
-            print("TERMINÓ timer")
+            rospy.sleep(2.0)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             print("NO se va a mover. NO encontró tf")
             continue

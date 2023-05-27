@@ -1,8 +1,0 @@
-prefix=/home/susyreyesm/ros/ur3c_ws/install
-
-Name: ur_handeye_calibration
-Description: Description of ur_handeye_calibration
-Version: 0.1.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

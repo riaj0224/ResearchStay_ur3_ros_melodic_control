@@ -1,8 +1,0 @@
-prefix=/home/susyreyesm/ros/ur3c_ws/install
-
-Name: trac_ik_examples
-Description: Description of trac_ik_examples
-Version: 1.6.6
-Cflags: -I/usr/include -I/opt/ros/melodic/share/orocos_kdl/cmake/../../../include -I/usr/include/eigen3
-Libs: -L${prefix}/lib /usr/lib/x86_64-linux-gnu/libboost_date_time.so /opt/ros/melodic/lib/liborocos-kdl.so.1.4.0 -lnlopt -lm
-Requires: trac_ik_lib

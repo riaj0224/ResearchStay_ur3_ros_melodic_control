@@ -1,0 +1,127 @@
+# Use official ROS Melodic image as the base
+FROM ros:melodic
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO melodic
+
+# Install ROS packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-melodic-desktop-full \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install universal robot ros packages
+RUN apt-get update && apt-get install -y \
+    ros-$ROS_DISTRO-gazebo-ros-pkgs \
+    ros-$ROS_DISTRO-spacenav-node \
+    ros-$ROS_DISTRO-rqt-common-plugins \
+    # Install catkin
+    ros-$ROS_DISTRO-catkin \
+    python-catkin-tools \
+    # Install Numpy Boost
+    libboost-dev \
+    libboost-python-dev \
+    libboost-system-dev \
+    libboost-all-dev \
+    libatlas-base-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    # Python dependencies
+    python-setuptools \
+    python-tk \
+    python-numpy \
+    # Utils
+    locate \
+    aptitude \
+    vim htop tmux \
+    curl wget \
+    tk \
+    spacenavd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install packages
+RUN apt-get update && apt-get install -q -y --no-install-recommends \
+    dirmngr \
+    gnupg2 \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt install -y python-catkin-lint python-pip git \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install osrf-pycommon
+
+### Ros Workspace ###
+# Set up the workspace
+RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash \
+    && mkdir -p ~/ros_ws/src \
+    && cd ~/ros_ws/ \
+    && catkin config -init --blacklist python_orocos_kdl orocos_kinematics_dynamics orocos_kdl"
+
+# Installing repo required for homework
+RUN /bin/bash -c "cd ~/ros_ws/src \
+    && git clone https://github.com/pal-robotics/aruco_ros.git -b melodic-devel || (cd aruco_ros && git pull origin melodic-devel) \
+    && git clone https://github.com/IntelRealSense/realsense-ros.git -b ros1-legacy || (cd realsense-ros && git pull origin ros1-legacy) \
+    && git clone https://github.com/cambel/ur3.git ros_ur3 -b melodic-devel || (cd ur3 && git pull origin melodic-devel) \
+    && git clone https://bitbucket.org/traclabs/trac_ik.git trac_ik || (cd trac_ik && git pull origin master) \
+    && git clone https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git universal_robots_ros_driver || (cd universal_robots_ros_driver && git pull origin master) \
+    && git clone -b calibration_devel https://github.com/fmauch/universal_robot.git universal_robot || (cd universal_robot && git pull origin calibration_devel)"
+
+# Install python library
+RUN cd ~/ros_ws\
+    && git clone https://github.com/cambel/ur_ikfast.git \
+    && cd ur_ikfast \
+    && pip install -e .
+
+# Updating ROSDEP and installing dependencies
+RUN rm -rf ~/ros_ws/src/ur3 \
+    && cd ~/ros_ws \
+    && rosinstall ~/ros_ws/src /opt/ros/$ROS_DISTRO src/ros_ur3/dependencies.rosinstall \
+    && apt-get update \
+    && rosdep fix-permissions \
+    && rosdep update \
+    && rosdep install --from-paths src --ignore-src --rosdistro=$ROS_DISTRO -y \
+    && rm -rf /var/lib/apt/lists/
+
+# Clone catkin repository to the workspace
+RUN cd ~/ros_ws/src \
+    && git clone https://github.com/ros/catkin.git
+
+RUN apt-get install -y ros-melodic-roscpp
+
+
+ENV PYTHONIOENCODING UTF-8
+
+## Python libraries ##
+RUN pip install --upgrade pip && \
+    pip install matplotlib==2.2.3 scipy protobuf pyyaml pyquaternion rospkg \
+    lxml tqdm catkin-pkg empy PyVirtualDisplay defusedxml gym psutil pyprind
+
+# # Compiling ros workspace
+RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash \
+    && cd ~/ros_ws/ \
+    && rm -rf build \
+    && catkin build"
+
+################################################
+# Custom python3 libs
+################################################
+# ur_ikfast
+RUN /bin/bash -c "cd ~/ \
+    && mkdir pylibs && cd pylibs \
+    && git clone https://github.com/cambel/ur_ikfast.git \
+    && cd ur_ikfast && pip install -e ."
+
+RUN apt-get update && apt-get install -y \
+    ros-$ROS_DISTRO-rqt-joint-trajectory-controller \
+    ros-$ROS_DISTRO-rqt-tf-tree \
+    ros-$ROS_DISTRO-rqt-multiplot \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y \
+    ros-$ROS_DISTRO-moveit \
+    ros-$ROS_DISTRO-moveit-runtime \
+    ros-$ROS_DISTRO-moveit-resources \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download gazebo models only once
+RUN mkdir -p ~/.gazebo
+RUN git clone https://github.com/osrf/gazebo_models ~/.gazebo/models
